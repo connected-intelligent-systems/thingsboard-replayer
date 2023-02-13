@@ -1,0 +1,5 @@
+node_modules
+.env
+.vscode
+node_modules
+data
