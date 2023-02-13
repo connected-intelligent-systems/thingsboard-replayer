@@ -9,13 +9,8 @@
   "author": "Sebastian Alberternst <sebastian.alberternst@dfki.de>",
   "license": "MIT",
   "dependencies": {
-    "@fast-csv/parse": "^4.3.6",
-    "csv": "^6.0.5",
     "env-var": "^7.1.1",
     "fast-csv": "^4.3.6",
-    "kafkajs": "^1.16.0",
-    "mqtt": "^4.3.7",
-    "p3x-binary-search-closest": "^2022.4.114",
-    "yargs": "^17.6.2"
+    "mqtt": "^4.3.7"
   }
 }
