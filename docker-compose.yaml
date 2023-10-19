@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  replayer:
+    image: ghcr.io/salberternst/syntised-replayer:v0.1.0
+    environment:
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_URL=${MQTT_URL}
+    restart: always
