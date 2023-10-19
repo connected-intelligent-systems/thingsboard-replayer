@@ -4,7 +4,10 @@
   "version": "0.0.1",
   "main": "index.js",
   "scripts": {
-    "start": "node ."
+    "start": "node .",
+    "lint": "standard --fix '**/*.js'",
+    "format": "prettier --write '**/*.js'",
+    "depcheck": "depcheck"
   },
   "author": "Sebastian Alberternst <sebastian.alberternst@dfki.de>",
   "license": "MIT",
@@ -12,5 +15,9 @@
     "env-var": "^7.1.1",
     "fast-csv": "^4.3.6",
     "mqtt": "^4.3.7"
+  },
+  "devDependencies": {
+    "depcheck": "^1.4.7",
+    "standard": "^17.1.0"
   }
 }
