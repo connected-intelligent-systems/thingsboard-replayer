@@ -19,8 +19,6 @@ COPY --from=refit /refit/*.csv /app/example_data
 
 RUN npm install --production
 
-ENV CSV_FILE=./example_data/household_example.csv
-
 COPY index.js /app
 
 CMD ["npm", "start"]
