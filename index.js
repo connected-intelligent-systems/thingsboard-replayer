@@ -44,6 +44,38 @@ const MaxWaitTime = env
   .asIntPositive()
 
 /**
+ * Read thing metadata from env variables
+ * @return {array} An array of thing metadata
+ */
+function readThingMetadataFromEnv () {
+  const metadata = []
+  const regexs = [
+    'ID',
+    'TITLE',
+    'DESCRIPTION',
+    'MODEL',
+    'MANUFACTURER',
+    'CATEGORY',
+    'PROPERTY_NAME',
+    'TYPE'
+  ].map((n) => new RegExp(`^THING_METADATA_(${n})_(\\d+)$`))
+  Object.keys(process.env).forEach((key) => {
+    regexs.forEach((regex) => {
+      const results = key.match(regex)
+      if (results !== null) {
+        const name = results[1].toLowerCase()
+        const index = +results[2]
+        if (metadata[index] === undefined) {
+          metadata[index] = {}
+        }
+        metadata[index][name] = process.env[key]
+      }
+    })
+  })
+  return metadata
+}
+
+/**
  * Returns the milliseconds relative to the day
  * @param {Date} date A JavaScript date object
  * @return {number} Milliseconds of the day
@@ -111,16 +143,24 @@ function getUniqueTypeId (thingModel) {
  * Send attributes of the row. Currently sets the thing model and some thing metadata
  * @param {MqttClient} mqttClient mqtt client to use
  * @param {string[]} row Row from the csv
+ * @param {Array} thingMetadata Thing Metadata
  */
-function sendAttributes (mqttClient, row) {
+function sendAttributes (mqttClient, row, thingMetadata) {
   const attributes = {}
-  for (const key of Object.keys(row)) {
+  for (const [index, key] of Object.keys(row).entries()) {
     if (key === CsvTimestampColumn || CsvIgnoreColumns.includes(key)) continue
-    const deviceId = getUniqueDeviceId(key)
-    attributes[deviceId] = {
-      'thing-model': ThingModel,
-      'thing-metadata': {
-        description: key
+    const deviceId = thingMetadata[index]?.id || getUniqueDeviceId(key)
+    // if different columns use the same id then they should also use the same model and metadata
+    // the first column defines the metadata -> ignore the rests
+    if (attributes[deviceId] === undefined) {
+      attributes[deviceId] = {
+        'thing-model': thingMetadata[index]?.model,
+        'thing-metadata': {
+          title: thingMetadata[index]?.title,
+          description: thingMetadata[index]?.description || key,
+          manufacturer: thingMetadata[index]?.manufacturer,
+          category: thingMetadata[index]?.category
+        }
       }
     }
   }
@@ -132,16 +172,16 @@ function sendAttributes (mqttClient, row) {
  * Send the connect message for every column.
  * @param {MqttClient} mqttClient mqtt client to use
  * @param {string[]} row Row from the csv
+ * @param {Array} thingMetadata Thing Metadata
  */
-function sendConnect (mqttClient, row) {
-  for (const key of Object.keys(row)) {
+function sendConnect (mqttClient, row, thingMetadata) {
+  for (const [index, key] of Object.keys(row).entries()) {
     if (key === CsvTimestampColumn || CsvIgnoreColumns.includes(key)) continue
-    const deviceId = getUniqueDeviceId(key)
     mqttClient.publish(
       'v1/gateway/connect',
       JSON.stringify({
-        device: deviceId,
-        type: getUniqueTypeId(ThingModel)
+        device: thingMetadata[index]?.id || getUniqueDeviceId(key),
+        type: thingMetadata[index]?.type || getUniqueTypeId(ThingModel)
       })
     )
   }
@@ -151,15 +191,23 @@ function sendConnect (mqttClient, row) {
  * Send the telemetry data for every column.
  * @param {MqttClient} mqttClient mqtt client to uses
  * @param {string[]} row Row from the csv
+ * @param {Array} thingMetadata Thing Metadata
  */
-function sendTelemetry (mqttClient, row) {
+function sendTelemetry (mqttClient, row, thingMetadata) {
   const telemetry = {}
-  for (const key of Object.keys(row)) {
+  for (const [index, key] of Object.keys(row).entries()) {
     if (key === CsvTimestampColumn || CsvIgnoreColumns.includes(key)) continue
-    const deviceId = getUniqueDeviceId(key)
+    const deviceId = thingMetadata[index]?.id || getUniqueDeviceId(key)
+    const propertyName = thingMetadata[index]?.property_name || key
+    if (telemetry[deviceId] === undefined) {
+      telemetry[deviceId] = []
+    }
+
     telemetry[deviceId] = [
+      ...telemetry[deviceId],
       {
-        power: +row[key]
+        [propertyName]: +row[key]
+        // "ts": 1483228801000,
       }
     ]
   }
@@ -185,6 +233,7 @@ function getDate (row) {
 }
 
 async function run () {
+  const thingMetadata = readThingMetadataFromEnv()
   const mqttClient = mqtt.connect(MqttUrl, {
     username: MqttUsername,
     password: MqttPassword
@@ -210,12 +259,12 @@ async function run () {
           await sleep(diff)
 
           if (sentAttributes === false) {
-            sendConnect(mqttClient, row)
-            sendAttributes(mqttClient, row)
+            sendConnect(mqttClient, row, thingMetadata)
+            sendAttributes(mqttClient, row, thingMetadata)
             sentAttributes = true
           }
 
-          sendTelemetry(mqttClient, row)
+          sendTelemetry(mqttClient, row, thingMetadata)
 
           readable.resume()
         }
