@@ -58,13 +58,13 @@ function readThingMetadataFromEnv () {
     'CATEGORY',
     'PROPERTY_NAME',
     'TYPE'
-  ].map((n) => new RegExp(`^THING_METADATA_(${n})_(\\d+)$`))
+  ].map((n) => new RegExp(`^COLUMN_(\\d+)_(${n})$`))
   Object.keys(process.env).forEach((key) => {
     regexs.forEach((regex) => {
       const results = key.match(regex)
       if (results !== null) {
-        const name = results[1].toLowerCase()
-        const index = +results[2]
+        const index = +results[1]
+        const name = results[2].toLowerCase()
         if (metadata[index] === undefined) {
           metadata[index] = {}
         }
