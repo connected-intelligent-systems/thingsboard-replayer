@@ -30,13 +30,6 @@ const CsvIgnoreColumns = env
 const MqttUrl = env.get('MQTT_URL').required().asString()
 const MqttUsername = env.get('MQTT_USERNAME').asString()
 const MqttPassword = env.get('MQTT_PASSWORD').asString()
-const ThingModel = env
-  .get('THING_MODEL')
-  .required()
-  .default(
-    'https://raw.githubusercontent.com/salberternst/thing-models/main/home_assistant/power.json'
-  )
-  .asString()
 const MaxWaitTime = env
   .get('MAX_WAIT_TIME')
   .required()
