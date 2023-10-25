@@ -181,7 +181,7 @@ function sendConnect (mqttClient, row, thingMetadata) {
       'v1/gateway/connect',
       JSON.stringify({
         device: thingMetadata[index]?.id || getUniqueDeviceId(key),
-        type: thingMetadata[index]?.type || getUniqueTypeId(ThingModel)
+        type: thingMetadata[index]?.type || getUniqueTypeId(thingMetadata[index]?.model)
       })
     )
   }

@@ -3,7 +3,6 @@
 Replayer can replay recorded timeseries data in realmtime from csv files to simulate advanced iot environments.
 
 Supported backends:
-  * MQTT
   * Thingsboard
 
 ## Usage
@@ -17,7 +16,6 @@ Use the following environment variables:
 * MQTT_URL: Url of the MQTT broker (e.g. mqtt://localhost:1883)
 * MQTT_USERNAME (optional): Username if authentication is needed
 * MQTT_PASSWORD (optional): Password if authentication is needed
-* THING_MODEL: Url to a W3C Thing Model describing describing the simulated device
 * MAX_WAIT_TIME: Skip rows that exceed the maximum time (default: 60000)
 
 ## Authors
