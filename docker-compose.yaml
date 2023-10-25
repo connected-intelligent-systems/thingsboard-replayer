@@ -1,9 +1,64 @@
 version: '3.8'
 
 services:
-  replayer:
-    image: ghcr.io/salberternst/syntised-replayer:v0.1.0
+  replayer-syntised:
+    image: ghcr.io/salberternst/syntised-replayer
     environment:
       - MQTT_USERNAME=${MQTT_USERNAME}
       - MQTT_URL=${MQTT_URL}
+      - CSV_FILE=/app/example_data/household_example.csv
+      - CSV_TIMESTAMP_COLUMN=timestamp
+      - CSV_TIMESTAMP_FORMAT=ISO
     restart: always
+
+  replayer-refit-1:
+    image: ghcr.io/salberternst/syntised-replayer
+    environment:
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_URL=${MQTT_URL}
+      - CSV_FILE=/app/example_data/House_1.csv
+      - CSV_TIMESTAMP_COLUMN=Time
+      - CSV_TIMESTAMP_FORMAT=ISO
+      - CSV_IGNORE_COLUMNS=Unix
+
+  replayer-refit-2:
+    image: ghcr.io/salberternst/syntised-replayer
+    environment:
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_URL=${MQTT_URL}
+      - CSV_FILE=/app/example_data/House_2.csv
+      - CSV_TIMESTAMP_COLUMN=Time
+      - CSV_TIMESTAMP_FORMAT=ISO
+      - CSV_IGNORE_COLUMNS=Unix
+
+  replayer-refit-3:
+    image: ghcr.io/salberternst/syntised-replayer
+    environment:
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_URL=${MQTT_URL}
+      - CSV_FILE=/app/example_data/House_3.csv
+      - CSV_TIMESTAMP_COLUMN=Time
+      - CSV_TIMESTAMP_FORMAT=ISO
+      - CSV_IGNORE_COLUMNS=Unix
+    
+  replayer-refit-4:
+    image: ghcr.io/salberternst/syntised-replayer
+    environment:
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_URL=${MQTT_URL}
+      - CSV_FILE=/app/example_data/House_4.csv
+      - CSV_TIMESTAMP_COLUMN=Time
+      - CSV_TIMESTAMP_FORMAT=ISO
+      - CSV_IGNORE_COLUMNS=Unix
+
+  replayer-refit-5:
+    image: ghcr.io/salberternst/syntised-replayer
+    environment:
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_URL=${MQTT_URL}
+      - CSV_FILE=/app/example_data/House_5.csv
+      - CSV_TIMESTAMP_COLUMN=Time
+      - CSV_TIMESTAMP_FORMAT=ISO
+      - CSV_IGNORE_COLUMNS=Unix
+
+  

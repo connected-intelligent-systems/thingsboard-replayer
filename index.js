@@ -5,6 +5,7 @@ const csv = require('fast-csv')
 const env = require('env-var')
 const mqtt = require('mqtt')
 const crypto = require('crypto')
+const path = require('path')
 
 const CsvTimestampFormats = Object.freeze({
   ISO: 'ISO',
@@ -42,7 +43,11 @@ const MaxWaitTime = env
   .default('60000')
   .asIntPositive()
 
-// returns the milliseconds of the day
+/**
+ * Returns the milliseconds relative to the day
+ * @param {Date} date A JavaScript date object
+ * @return {number} Milliseconds of the day
+ */
 function getMillisecondsOfDay (date) {
   return (
     (date.getHours() * 60 * 60 + date.getMinutes() * 60 + date.getSeconds()) *
@@ -51,12 +56,22 @@ function getMillisecondsOfDay (date) {
   )
 }
 
+/**
+ * Sleeps for an amount of times
+ * @param {number} ms Number of milliseconds to sleep
+ */
 function sleep (ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
 }
 
+/**
+ * Calculates a unique device id for the row name. Currently calculates
+ * the sha1 hash of the concatenated name and the mqtt username.
+ * @param {string} name Name of the row
+ * @return {string} Unique device ids
+ */
 function getUniqueDeviceId (name) {
   return crypto
     .createHash('sha1')
@@ -64,6 +79,39 @@ function getUniqueDeviceId (name) {
     .digest('hex')
 }
 
+/**
+ * Returns the base name of an url to extract the file name.
+ * @param {string} urlStr Urls
+ * @return {string} Base name of the urls
+ */
+function getBasenameFromUrl (urlStr) {
+  const url = new URL(urlStr)
+  return path.parse(url.pathname).name
+}
+
+/**
+ * Extract a unique but human-readable type from the thing-model The unique type
+ * can be used to filter actions in the thingsboard rule engine.
+ * @param {string} thingModel Url to the thing model
+ * @return {string} Unique type id
+ */
+function getUniqueTypeId (thingModel) {
+  if (thingModel === undefined) {
+    return 'default'
+  } else {
+    const hashedModelUrl = crypto
+      .createHash('sha1')
+      .update(thingModel)
+      .digest('hex')
+    return `${getBasenameFromUrl(thingModel)}#${hashedModelUrl}`
+  }
+}
+
+/**
+ * Send attributes of the row. Currently sets the thing model and some thing metadata
+ * @param {MqttClient} mqttClient mqtt client to use
+ * @param {string[]} row Row from the csv
+ */
 function sendAttributes (mqttClient, row) {
   const attributes = {}
   for (const key of Object.keys(row)) {
@@ -80,6 +128,30 @@ function sendAttributes (mqttClient, row) {
   mqttClient.publish('v1/gateway/attributes', JSON.stringify(attributes))
 }
 
+/**
+ * Send the connect message for every column.
+ * @param {MqttClient} mqttClient mqtt client to use
+ * @param {string[]} row Row from the csv
+ */
+function sendConnect (mqttClient, row) {
+  for (const key of Object.keys(row)) {
+    if (key === CsvTimestampColumn || CsvIgnoreColumns.includes(key)) continue
+    const deviceId = getUniqueDeviceId(key)
+    mqttClient.publish(
+      'v1/gateway/connect',
+      JSON.stringify({
+        device: deviceId,
+        type: getUniqueTypeId(ThingModel)
+      })
+    )
+  }
+}
+
+/**
+ * Send the telemetry data for every column.
+ * @param {MqttClient} mqttClient mqtt client to uses
+ * @param {string[]} row Row from the csv
+ */
 function sendTelemetry (mqttClient, row) {
   const telemetry = {}
   for (const key of Object.keys(row)) {
@@ -94,6 +166,11 @@ function sendTelemetry (mqttClient, row) {
   mqttClient.publish('v1/gateway/telemetry', JSON.stringify(telemetry))
 }
 
+/**
+ * Return the date from the select date column and date settings.
+ * @param {string[]} row Row from the csv
+ * @return {Date} The returned date object
+ */
 function getDate (row) {
   const date = row[CsvTimestampColumn]
   if (date === undefined) {
@@ -133,6 +210,7 @@ async function run () {
           await sleep(diff)
 
           if (sentAttributes === false) {
+            sendConnect(mqttClient, row)
             sendAttributes(mqttClient, row)
             sentAttributes = true
           }
