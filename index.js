@@ -35,6 +35,7 @@ const MaxWaitTime = env
   .required()
   .default('60000')
   .asIntPositive()
+const ReplaceTimestamp = env.get('REPLACE_TIMESTAMP').default('true').asBool()
 
 /**
  * Read thing metadata from env variables
@@ -174,7 +175,9 @@ function sendConnect (mqttClient, row, thingMetadata) {
       'v1/gateway/connect',
       JSON.stringify({
         device: thingMetadata[index]?.id || getUniqueDeviceId(key),
-        type: thingMetadata[index]?.type || getUniqueTypeId(thingMetadata[index]?.model)
+        type:
+          thingMetadata[index]?.type ||
+          getUniqueTypeId(thingMetadata[index]?.model)
       })
     )
   }
@@ -199,8 +202,8 @@ function sendTelemetry (mqttClient, row, thingMetadata) {
     telemetry[deviceId] = [
       ...telemetry[deviceId],
       {
-        [propertyName]: +row[key]
-        // "ts": 1483228801000,
+        [propertyName]: +row[key],
+        ...(ReplaceTimestamp && { ts: getDate(row).getTime() })
       }
     ]
   }
