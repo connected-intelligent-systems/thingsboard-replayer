@@ -35,7 +35,7 @@ const MaxWaitTime = env
   .required()
   .default('60000')
   .asIntPositive()
-const ReplaceTimestamp = env.get('REPLACE_TIMESTAMP').default('true').asBool()
+const UseRealtime = env.get('USE_REALTIME').required().default('true').asBool()
 
 /**
  * Read thing metadata from env variables
@@ -196,16 +196,14 @@ function sendTelemetry (mqttClient, row, thingMetadata) {
     const deviceId = thingMetadata[index]?.id || getUniqueDeviceId(key)
     const propertyName = thingMetadata[index]?.property_name || key
     if (telemetry[deviceId] === undefined) {
-      telemetry[deviceId] = []
+      telemetry[deviceId] = [
+        {
+          ...(UseRealtime === false && { ts: getDate(row).getTime() }),
+          values: {}
+        }
+      ]
     }
-
-    telemetry[deviceId] = [
-      ...telemetry[deviceId],
-      {
-        [propertyName]: +row[key],
-        ...(ReplaceTimestamp && { ts: getDate(row).getTime() })
-      }
-    ]
+    telemetry[deviceId][0].values[propertyName] = +row[key]
   }
   mqttClient.publish('v1/gateway/telemetry', JSON.stringify(telemetry))
 }
@@ -235,36 +233,34 @@ async function run () {
     password: MqttPassword
   })
 
-  mqttClient.on('connect', () => {
+  mqttClient.on('connect', async () => {
     let sentAttributes = false
     const csvOptions = {
       headers: true,
       delimiter: ','
     }
-    const readable = fs
-      .createReadStream(CsvFile)
-      .pipe(csv.parse(csvOptions))
-      .on('error', (error) => console.error(error))
-      .on('data', async (row) => {
+    const csvStream = fs.createReadStream(CsvFile).pipe(csv.parse(csvOptions))
+
+    for await (const row of csvStream) {
+      if (UseRealtime) {
         const now = getMillisecondsOfDay(new Date())
         const time = getMillisecondsOfDay(getDate(row))
         const diff = time - now
         if (diff >= 0 && diff < MaxWaitTime) {
-          readable.pause()
-
           await sleep(diff)
-
-          if (sentAttributes === false) {
-            sendConnect(mqttClient, row, thingMetadata)
-            sendAttributes(mqttClient, row, thingMetadata)
-            sentAttributes = true
-          }
-
-          sendTelemetry(mqttClient, row, thingMetadata)
-
-          readable.resume()
         }
-      })
+      }
+
+      if (sentAttributes === false) {
+        sendConnect(mqttClient, row, thingMetadata)
+        sendAttributes(mqttClient, row, thingMetadata)
+        sentAttributes = true
+      }
+
+      sendTelemetry(mqttClient, row, thingMetadata)
+    }
+
+    mqttClient.end()
   })
 
   mqttClient.on('error', (err) => {
