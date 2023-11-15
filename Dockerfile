@@ -8,7 +8,7 @@ RUN wget https://pureportal.strath.ac.uk/files/52873459/Processed_Data_CSV.7z &&
     7z x Processed_Data_CSV.7z && \
     rm Processed_Data_CSV.7z
 
-FROM node:12.21.0
+FROM node:20.9.0
 
 WORKDIR /app
 

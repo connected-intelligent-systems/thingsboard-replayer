@@ -1,9 +1,6 @@
-# Replayer
+# Thingsboard Replayer
 
-Replayer can replay recorded timeseries data in realmtime from csv files to simulate advanced iot environments.
-
-Supported backends:
-  * Thingsboard
+Thingsboard replayer can replay recorded timeseries data in realtime from csv files to simulate advanced iot environments.
 
 ## Usage
 
