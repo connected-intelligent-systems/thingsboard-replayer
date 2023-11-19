@@ -199,11 +199,11 @@ function sendTelemetry (mqttClient, row, thingMetadata) {
       telemetry[deviceId] = [
         {
           ...(UseRealtime === false && { ts: getDate(row).getTime() }),
-          values: {}
+          [propertyName]: {}
         }
       ]
     }
-    telemetry[deviceId][0].values[propertyName] = +row[key]
+    telemetry[deviceId][0][propertyName] = +row[key]
   }
   mqttClient.publish('v1/gateway/telemetry', JSON.stringify(telemetry))
 }
