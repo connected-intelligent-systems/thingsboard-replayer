@@ -248,6 +248,8 @@ async function run () {
         const diff = time - now
         if (diff >= 0 && diff < MaxWaitTime) {
           await sleep(diff)
+        } else {
+          continue
         }
       }
 
