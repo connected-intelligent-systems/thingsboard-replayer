@@ -47,11 +47,12 @@ function readThingMetadataFromEnv () {
     'ID',
     'TITLE',
     'DESCRIPTION',
-    'MODEL',
+    'THING_MODEL',
     'MANUFACTURER',
     'CATEGORY',
     'PROPERTY_NAME',
-    'TYPE'
+    'TYPE',
+    'MODEL'
   ].map((n) => new RegExp(`^COLUMN_(\\d+)_(${n})$`))
   Object.keys(process.env).forEach((key) => {
     regexs.forEach((regex) => {
@@ -148,12 +149,13 @@ function sendAttributes (mqttClient, row, thingMetadata) {
     // the first column defines the metadata -> ignore the rests
     if (attributes[deviceId] === undefined) {
       attributes[deviceId] = {
-        'thing-model': thingMetadata[index]?.model,
+        'thing-model': thingMetadata[index]?.thing_model,
         'thing-metadata': {
           title: thingMetadata[index]?.title,
           description: thingMetadata[index]?.description || key,
           manufacturer: thingMetadata[index]?.manufacturer,
-          category: thingMetadata[index]?.category
+          category: thingMetadata[index]?.category,
+          model: thingMetadata[index]?.model,
         }
       }
     }
