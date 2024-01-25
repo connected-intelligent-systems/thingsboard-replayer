@@ -36,7 +36,7 @@ const MaxWaitTime = env
   .default('60000')
   .asIntPositive()
 const UseRealtime = env.get('USE_REALTIME').required().default('true').asBool()
-
+const RowRecoveryFile = env.get('ROW_RECOVERY_FILE').asString()
 /**
  * Read thing metadata from env variables
  * @return {array} An array of thing metadata
@@ -228,6 +228,13 @@ function getDate (row) {
   }
 }
 
+function getSkipRows() {
+  if(RowRecoveryFile) {
+    return parseInt(fs.readFileSync(RowRecoveryFile, 'utf-8'))
+  }
+  return 0
+}
+
 async function run () {
   const thingMetadata = readThingMetadataFromEnv()
   const mqttClient = mqtt.connect(MqttUrl, {
@@ -237,13 +244,21 @@ async function run () {
 
   mqttClient.on('connect', async () => {
     let sentAttributes = false
+    let currentRow = 0
     const csvOptions = {
       headers: true,
       delimiter: ','
     }
+    const skipRows = getSkipRows()
     const csvStream = fs.createReadStream(CsvFile).pipe(csv.parse(csvOptions))
 
+    csvStream.on('data', () => currentRow++)
+
     for await (const row of csvStream) {
+      if(currentRow <= skipRows) {
+        continue
+      }
+
       if (UseRealtime) {
         const now = getMillisecondsOfDay(new Date())
         const time = getMillisecondsOfDay(getDate(row))
@@ -251,6 +266,7 @@ async function run () {
         if (diff >= 0 && diff < MaxWaitTime) {
           await sleep(diff)
         } else {
+          // skip late lines
           continue
         }
       }
@@ -262,6 +278,10 @@ async function run () {
       }
 
       sendTelemetry(mqttClient, row, thingMetadata)
+
+      if(RowRecoveryFile) {
+        fs.writeFileSync(RowRecoveryFile, `${currentRow}`)
+      }
     }
 
     mqttClient.end()
