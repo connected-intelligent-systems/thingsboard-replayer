@@ -155,7 +155,7 @@ function sendAttributes (mqttClient, row, thingMetadata) {
           description: thingMetadata[index]?.description || key,
           manufacturer: thingMetadata[index]?.manufacturer,
           category: thingMetadata[index]?.category,
-          model: thingMetadata[index]?.model,
+          model: thingMetadata[index]?.model
         }
       }
     }
@@ -228,11 +228,11 @@ function getDate (row) {
   }
 }
 
-function getSkipRows() {
-  if(RowRecoveryFile) {
-    try { 
+function getSkipRows () {
+  if (RowRecoveryFile) {
+    try {
       parseInt(fs.readFileSync(RowRecoveryFile, 'utf-8'))
-    } catch(e) {
+    } catch (e) {
       return 0
     }
   }
@@ -259,7 +259,7 @@ async function run () {
     csvStream.on('data', () => currentRow++)
 
     for await (const row of csvStream) {
-      if(currentRow <= skipRows) {
+      if (currentRow <= skipRows) {
         continue
       }
 
@@ -283,9 +283,13 @@ async function run () {
 
       sendTelemetry(mqttClient, row, thingMetadata)
 
-      if(RowRecoveryFile) {
+      if (RowRecoveryFile) {
         fs.writeFileSync(RowRecoveryFile, `${currentRow}`)
       }
+    }
+
+    if (RowRecoveryFile) {
+      fs.writeFileSync(RowRecoveryFile, '0')
     }
 
     mqttClient.end()
