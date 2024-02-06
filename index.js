@@ -231,7 +231,7 @@ function getDate (row) {
 function getSkipRows () {
   if (RowRecoveryFile) {
     try {
-      parseInt(fs.readFileSync(RowRecoveryFile, 'utf-8'))
+      return parseInt(fs.readFileSync(RowRecoveryFile, 'utf-8'))
     } catch (e) {
       return 0
     }
