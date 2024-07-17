@@ -37,7 +37,7 @@ const MaxWaitTime = env
   .asIntPositive()
 const UseRealtime = env.get('USE_REALTIME').required().default('true').asBool()
 const RowRecoveryFile = env.get('ROW_RECOVERY_FILE').asString()
-const Insecure = env.get('INSECURE').default('true').asBool()
+const rejectUnauthorized = env.get('REJECT_UNAUTHORIZED').default('true').asBool()
 /**
  * Read thing metadata from env variables
  * @return {array} An array of thing metadata
@@ -245,7 +245,7 @@ async function run () {
   const mqttClient = mqtt.connect(MqttUrl, {
     username: MqttUsername,
     password: MqttPassword,
-    rejectUnauthorized: Insecure
+    rejectUnauthorized: rejectUnauthorized
   })
 
   mqttClient.on('connect', async () => {
