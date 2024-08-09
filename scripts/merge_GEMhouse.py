@@ -1,20 +1,28 @@
 import os
 import pandas as pd
+import json
 
-folder = "../example_data/gem"
+folder = os.path.abspath("example_data/gem")
 
-# get all csv files in the folder
-files = [f for f in os.listdir(folder) if f.endswith('.csv')]
+split_json = os.path.join(folder, 'split.json')
 
-# get the first file and read it into a pandas dataframe and rename the power column to the filename
+# get split.json
+with open(split_json) as f:
+    split = json.load(f)
+
+files = [os.path.join(folder, f + '.csv') for f in split['test_households']]
+print(files)
+
+
+# get the first file for the timestamp column
 df = pd.read_csv(os.path.join(folder, files[0]))
-df = df.rename(columns={'power': files[0].split('.')[0]})
+df = df.rename(columns={'power': files[0].split('.')[0].split('/')[-1]})
 df = df.set_index('timestamp')
 
-# loop through the rest of the files and merge the power column into the dataframe with the timestamp as the index column and rename the power column to the filename
+# loop through the rest of the files and merge the power column into the dataframe 
 for f in files[1:]:
     df2 = pd.read_csv(os.path.join(folder, f))
-    df2 = df2.rename(columns={'power': f.split('.')[0]})
+    df2 = df2.rename(columns={'power': f.split('.')[0].split('/')[-1]})
     df2 = df2.set_index('timestamp')
     df = pd.merge(df, df2, how='outer', left_index=True, right_index=True)
 
