@@ -199,16 +199,26 @@ function sendTelemetry (mqttClient, row, thingMetadata) {
     const deviceId = thingMetadata[index]?.id || getUniqueDeviceId(key)
     const propertyName = thingMetadata[index]?.property_name || key
     if (telemetry[deviceId] === undefined) {
-      telemetry[deviceId] = [
-        {
-          ...(UseRealtime === false && { ts: getDate(row).getTime() }),
-          [propertyName]: {}
-        }
-      ]
+      if (UseRealtime === false) {
+        telemetry[deviceId] = [
+          {
+            ts: getDate(row).getTime(),
+            values: {}
+          }
+        ]
+        telemetry[deviceId][0].values[propertyName] = row[key];
+      } 
+      else if (UseRealtime === true) {
+        telemetry[deviceId] = [
+          {
+            [propertyName]: {}
+          }
+        ]
+        telemetry[deviceId][0][propertyName] = +row[key]
+      }
     }
-    telemetry[deviceId][0][propertyName] = +row[key]
+  mqttClient.publish('v1/gateway/telemetry', JSON.stringify(telemetry, null, 2))
   }
-  mqttClient.publish('v1/gateway/telemetry', JSON.stringify(telemetry))
 }
 
 /**
@@ -282,7 +292,6 @@ async function run () {
         sendAttributes(mqttClient, row, thingMetadata)
         sentAttributes = true
       }
-
       sendTelemetry(mqttClient, row, thingMetadata)
 
       if (RowRecoveryFile) {
