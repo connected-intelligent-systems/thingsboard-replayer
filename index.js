@@ -37,6 +37,7 @@ const MaxWaitTime = env
   .asIntPositive()
 const UseRealtime = env.get('USE_REALTIME').required().default('true').asBool()
 const RowRecoveryFile = env.get('ROW_RECOVERY_FILE').asString()
+const rejectUnauthorized = env.get('REJECT_UNAUTHORIZED').default('true').asBool()
 /**
  * Read thing metadata from env variables
  * @return {array} An array of thing metadata
@@ -198,16 +199,26 @@ function sendTelemetry (mqttClient, row, thingMetadata) {
     const deviceId = thingMetadata[index]?.id || getUniqueDeviceId(key)
     const propertyName = thingMetadata[index]?.property_name || key
     if (telemetry[deviceId] === undefined) {
-      telemetry[deviceId] = [
-        {
-          ...(UseRealtime === false && { ts: getDate(row).getTime() }),
-          [propertyName]: {}
-        }
-      ]
+      if (UseRealtime === false) {
+        telemetry[deviceId] = [
+          {
+            ts: getDate(row).getTime(),
+            values: {}
+          }
+        ]
+        telemetry[deviceId][0].values[propertyName] = row[key];
+      } 
+      else if (UseRealtime === true) {
+        telemetry[deviceId] = [
+          {
+            [propertyName]: {}
+          }
+        ]
+        telemetry[deviceId][0][propertyName] = +row[key]
+      }
     }
-    telemetry[deviceId][0][propertyName] = +row[key]
+  mqttClient.publish('v1/gateway/telemetry', JSON.stringify(telemetry, null, 2))
   }
-  mqttClient.publish('v1/gateway/telemetry', JSON.stringify(telemetry))
 }
 
 /**
@@ -243,7 +254,8 @@ async function run () {
   const thingMetadata = readThingMetadataFromEnv()
   const mqttClient = mqtt.connect(MqttUrl, {
     username: MqttUsername,
-    password: MqttPassword
+    password: MqttPassword,
+    rejectUnauthorized: rejectUnauthorized
   })
 
   mqttClient.on('connect', async () => {
@@ -280,7 +292,6 @@ async function run () {
         sendAttributes(mqttClient, row, thingMetadata)
         sentAttributes = true
       }
-
       sendTelemetry(mqttClient, row, thingMetadata)
 
       if (RowRecoveryFile) {
