@@ -36,8 +36,12 @@ const MaxWaitTime = env
   .default('60000')
   .asIntPositive()
 const UseRealtime = env.get('USE_REALTIME').required().default('true').asBool()
+const UseRelativeTimestamp = env.get('USE_RELATIVE_TIMESTAMP').default('false').asBool()
 const RowRecoveryFile = env.get('ROW_RECOVERY_FILE').asString()
-const rejectUnauthorized = env.get('REJECT_UNAUTHORIZED').default('true').asBool()
+const RejectUnauthorized = env.get('REJECT_UNAUTHORIZED').default('true').asBool()
+
+const scriptStartTime = Date.now()
+
 /**
  * Read thing metadata from env variables
  * @return {array} An array of thing metadata
@@ -79,7 +83,7 @@ function readThingMetadataFromEnv () {
 function getMillisecondsOfDay (date) {
   return (
     (date.getHours() * 60 * 60 + date.getMinutes() * 60 + date.getSeconds()) *
-      1000 +
+    1000 +
     date.getMilliseconds()
   )
 }
@@ -206,9 +210,8 @@ function sendTelemetry (mqttClient, row, thingMetadata) {
             values: {}
           }
         ]
-        telemetry[deviceId][0].values[propertyName] = row[key];
-      } 
-      else if (UseRealtime === true) {
+        telemetry[deviceId][0].values[propertyName] = row[key]
+      } else if (UseRealtime === true) {
         telemetry[deviceId] = [
           {
             [propertyName]: {}
@@ -217,12 +220,12 @@ function sendTelemetry (mqttClient, row, thingMetadata) {
         telemetry[deviceId][0][propertyName] = +row[key]
       }
     }
-  mqttClient.publish('v1/gateway/telemetry', JSON.stringify(telemetry, null, 2))
+    mqttClient.publish('v1/gateway/telemetry', JSON.stringify(telemetry, null, 2))
   }
 }
 
 /**
- * Return the date from the select date column and date settings.
+ * Return the date from the selected date column and date settings.
  * @param {string[]} row Row from the csv
  * @return {Date} The returned date object
  */
@@ -232,11 +235,19 @@ function getDate (row) {
     throw new Error('Invalid timestamp column')
   }
 
+  let parsedDate
   if (CsvTimestampFormat === CsvTimestampFormats.ISO) {
-    return new Date(date)
+    parsedDate = new Date(date)
   } else {
-    return new Date(+date)
+    parsedDate = new Date(+date)
   }
+
+  if (UseRelativeTimestamp) {
+    const relativeTime = parsedDate.getTime() - scriptStartTime
+    return new Date(scriptStartTime + relativeTime)
+  }
+
+  return parsedDate
 }
 
 function getSkipRows () {
@@ -255,7 +266,7 @@ async function run () {
   const mqttClient = mqtt.connect(MqttUrl, {
     username: MqttUsername,
     password: MqttPassword,
-    rejectUnauthorized: rejectUnauthorized
+    rejectUnauthorized: RejectUnauthorized
   })
 
   mqttClient.on('connect', async () => {
