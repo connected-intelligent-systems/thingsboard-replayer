@@ -41,6 +41,7 @@ const RowRecoveryFile = env.get('ROW_RECOVERY_FILE').asString()
 const RejectUnauthorized = env.get('REJECT_UNAUTHORIZED').default('true').asBool()
 
 const scriptStartTime = Date.now()
+let baseTime = null
 
 /**
  * Read thing metadata from env variables
@@ -243,7 +244,10 @@ function getDate (row) {
   }
 
   if (UseRelativeTimestamp) {
-    const relativeTime = parsedDate.getTime() - scriptStartTime
+    if (!baseTime) {
+      baseTime = parsedDate.getTime()
+    }
+    const relativeTime = parsedDate.getTime() - baseTime
     return new Date(scriptStartTime + relativeTime)
   }
 
