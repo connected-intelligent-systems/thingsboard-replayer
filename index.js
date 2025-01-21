@@ -221,8 +221,8 @@ function sendTelemetry (mqttClient, row, thingMetadata) {
         telemetry[deviceId][0][propertyName] = +row[key]
       }
     }
-    mqttClient.publish('v1/gateway/telemetry', JSON.stringify(telemetry, null, 2))
   }
+  mqttClient.publish('v1/gateway/telemetry', JSON.stringify(telemetry, null, 2))
 }
 
 /**
